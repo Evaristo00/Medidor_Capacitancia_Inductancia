@@ -7,10 +7,15 @@
 
 #include <stm32f103x6.h>
 #include <stdio.h>
+#include <stdint.h>
+#include "lcd.h"
+#include "rlc.h"
+
 void usart1_init(void);
 void usart1_sendByte(unsigned char c);
 void usart1_sendInt(unsigned int i);
-void usart1_sendStr(char *str);
+
+volatile 	uint32_t L2=0,aux;
 
 int main (void)
 { 
@@ -19,34 +24,46 @@ int main (void)
    GPIOA->CRL = 0x44444004; //PA1 and PA2 as analog input
    ADC1->CR2 = 1 //ADON = 1 (power-up)
 	*/
-	uint16_t t, t0;
+
+
 	RCC->APB2ENR |= (0xFC| (1<<14)); /* enable GPIO clocks and USART1 clock */
 	RCC->APB1ENR |= (1<<0); /* enable TIM2 clock */
+
+
+	GPIOB->CRL = 0x44444443;
 	GPIOA->CRL = 0x44444844; /* PA2 (TIM2 CH3): input pull-up */
 	GPIOA->ODR |= (1<<2);
+
 	TIM2->CCMR2 = 0x001; /* Pin TIM2_CH3 as input for channel 3 */
-	TIM2->CCER = (1<< 8); /*CC3P = 0 (rising), CC3E = 1 */
+	TIM2->CCER = (0x1<< 8); /*CC3P = 0 (rising), CC3E = 1 */
 	TIM2->PSC = 7200-1;
 	TIM2->ARR = 50000-1;
-	TIM2->CR1 = 1; /* start counting up */
-	usart1_init( );
-	t = 0, t0 = 0;
+	usart1_init();
+	lcd_init();
+	lcd_gotoXY(0,0);
+
 while(1) {
-	while((TIM2->SR &(1<<3)) == 0); /* wait until the CC3IF flag
-	sets */
-	t = TIM2->CCR3; /* read the captured value */
-	usart1_sendInt(t - t0); /* send the difference */
-	usart1_sendStr("\n\r"); /* go to new line */
-	t0 = t;
+	L2 = 1000000.0*RLC_measure();
+	aux = L2;
+	while (L2 > 0){
+		aux = L2%10;
+		L2/= 10;
+		lcd_sendData(aux + '0');
 	}
-   return 0;
+	 /* send the difference */
+	//usart1_sendInt((uint32_t) L);
+	//usart1_sendByte('\n'); /* go to new line */
+	//usart1_sendByte('\r');
+
+	}
+
 }   
 
 void usart1_init( ) {
 	GPIOA->ODR |= (1<<10); //pull-up PA10
 	GPIOA->CRH = 0x444448B4; // RX1=input with pull-up, TX1=alt. func output
 	USART1->CR1 = 0x200C;
-	USART1->BRR = 7500; // 72MHz/9600bps = 7500
+	USART1->BRR = 104; // 72MHz/9600bps = 7500
 }
 void usart1_sendByte(unsigned char c) {
 	while((USART1->SR&(1<<6)) == 0); //wait until the TC flag is set
