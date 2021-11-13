@@ -10,7 +10,7 @@ void lcd_init()
    lcd_sendCommand(0x0C); /* display on, cursor on */
    lcd_sendCommand(0x01); /* clear LCD */
    delay_us(2000); /* wait 2ms */
-   lcd_sendCommand(0x06); /* shift cursor left */
+   lcd_sendCommand(0x04); /* shift cursor left */
 }
 
 void lcd_sendCommand (uint8_t cmd)

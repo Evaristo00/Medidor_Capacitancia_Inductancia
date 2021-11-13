@@ -6,3 +6,4 @@
 #define PI 3.14159265359
 
 float RLC_measure(void);
+void RLC_init(void);
